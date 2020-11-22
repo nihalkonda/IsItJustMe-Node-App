@@ -1,5 +1,5 @@
 import * as mongoose from 'mongoose';
-import { LocationSchema } from '../schemas';
+import { LocationSchema, StatsSchema } from '../schemas';
 
 const postSchema = new mongoose.Schema({
     author:{
@@ -13,6 +13,11 @@ const postSchema = new mongoose.Schema({
             trim: true,
             required: 'title is required'
         },
+        body:{
+            type: String,
+            trim: true,
+            required: 'body is required'
+        },
         tags:[{
             type: String
         }]
@@ -22,25 +27,12 @@ const postSchema = new mongoose.Schema({
         enum:['open','resolved'],
         default:'open'
     },
-    location:LocationSchema,
-    stats:{
-        viewsCount:{
-            type:Number,
-            default:0
-        },
-        upvoteCount:{
-            type:Number,
-            default:0
-        },
-        downvoteCount:{
-            type:Number,
-            default:0
-        },
-        updateCount:{
-            type:Number,
-            default:0
-        }
+    isDeleted:{
+        type:Boolean,
+        default:false
     },
+    location:LocationSchema,
+    stats:StatsSchema,
     createdAt:{
         type:Date,
         default:Date.now

@@ -7,11 +7,28 @@ const router = Router()
 
 const userController = new UserController()
 
+const validatorMiddleware = new Middlewares.ValidatorMiddleware();
+
 //router.post('/',LoggerMiddleware('v1'),userController.create)
 
 router.post('/search',Middlewares.authCheck(false),userController.getAll)
 
-router.put('/',Middlewares.authCheck(true),userController.update)
+router.put('/',Middlewares.authCheck(true),validatorMiddleware.validateRequestBody({
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["firstName","lastName","displayPicture"],
+    "properties": {
+        "firstName":{
+            "type":"string"
+        },
+        "lastName":{
+            "type":"string"
+        },
+        "displayPicture":{
+            "type":"string"
+        }
+    }
+}),userController.update)
 
 router.get('/me',Middlewares.authCheck(true),userController.getMe)
 

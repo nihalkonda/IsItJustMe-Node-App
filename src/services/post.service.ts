@@ -2,8 +2,9 @@ import {PostRepository} from '../repositories';
 import {Helpers,Services} from 'node-library';
 import {PubSubMessageTypes} from '../helpers/pubsub.helper';
 import { BinderNames } from '../helpers/binder.helper';
+import StatsService from './stats.service';
 
-class PostService extends Services.AuthorService {
+class PostService extends StatsService {
 
     private static instance: PostService;
     
@@ -20,24 +21,14 @@ class PostService extends Services.AuthorService {
         return PostService.instance;
     }
 
-    create = async(request:Helpers.Request,bodyP) => {
-        console.log('post.service',request,bodyP);
-
-        let data:any = bodyP;
+    create = async(request:Helpers.Request,data) => {
+        console.log('post.service',request,data);
 
         data.author = request.getUserId();
 
-        if(data.status === 'published'){
-            data.draft = {
-                title:'',
-                body:'',
-                tags:[]
-            };
-        }
-
         console.log('post.service','db insert',data);
 
-        data = await this.repository.create(bodyP);
+        data = await this.repository.create(data);
 
         Services.PubSub.Organizer.publishMessage({
             request,
@@ -51,7 +42,7 @@ class PostService extends Services.AuthorService {
     }
 
     getAll = async(request:Helpers.Request, query = {}, sort = {}, pageSize:number = 5, pageNum:number = 1, attributes:string[] = []) => {
-        const exposableAttributes = ['author','published.title','published.tags','published.lastModifiedAt','createdAt','status','stats','access.type'];
+        const exposableAttributes = ['author','content.title','content.tags','location','status','isDeleted','stats','createdAt','lastModifiedAt','threadLastUpdatedAt'];
         if(attributes.length === 0)
             attributes = exposableAttributes;
         else
@@ -61,26 +52,13 @@ class PostService extends Services.AuthorService {
         return this.repository.getAll(query,sort,pageSize,pageNum,attributes);
     }
 
-    update = async(request:Helpers.Request,documentId:string,bodyP) => {
-        console.log('post.service',request,bodyP);
-
-        let data :any = bodyP
-
-        if(data.status === 'published'){
-            data.draft = {
-                title:'',
-                body:'',
-                tags:[]
-            };
-        }else{
-            delete data.status
-        }
-
-        data[data.status] = {
-            lastModifiedAt:new Date()
-        }
+    update = async(request:Helpers.Request,documentId:string,data) => {
+        console.log('post.service',request,data);
 
         //data = Helpers.JSON.normalizeJson(data);
+
+        data.lastModifiedAt = new Date();
+        data.isDeleted = false;
 
         console.log('post.service','db update',data);
 
@@ -97,8 +75,8 @@ class PostService extends Services.AuthorService {
 
     delete = async(request:Helpers.Request,documentId:string) => {
         let data :any = {
-            status:'deleted'
-        }
+            isDeleted:true
+        };
 
         data = await this.repository.updatePartial(documentId,data);
 

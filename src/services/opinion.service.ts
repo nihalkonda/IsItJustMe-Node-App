@@ -22,23 +22,39 @@ class OpinionService extends Services.AuthorService {
     create = async(request:Helpers.Request,data) => {
         console.log('opinion.service',request,data);
 
-        const postIdExists = await Services.Binder.boundFunction(BinderNames.POST.CHECK.ID_EXISTS)(request,data.postId)
-        console.log('opinion.service','create','postIdExists',postIdExists)
+        data.postId = request.raw.params['postId'];
+        data.commentId = request.raw.params['commentId']||'none';
+
+        const post = await Services.Binder.boundFunction(BinderNames.POST.CHECK.ID_EXISTS)(request,data.postId)
         
-        if(!postIdExists)
+        console.log('comment.service','create','postIdExists',post)
+
+        if(!post)
             throw this.buildError(404,'postId not available')
+
+        if(data.commentId !== 'none'){
+            const comment = await Services.Binder.boundFunction(BinderNames.COMMENT.CHECK.ID_EXISTS)(request,data.commentId);
+            console.log('comment.service','create','commentIdExists',comment)
+
+            if(!comment)
+                throw this.buildError(404,'commentId not available')
+
+            if(comment.postId !== data.postId)
+                throw this.buildError(404,'commentId not available under the postId')
+        }
 
         data.author = request.getUserId();
 
         let response = await this.getAll(request,{
             author:data.author,
-            postId:data.postId
+            postId:data.postId,
+            commentId:data.commentId
         },100);
 
         if(response.resultSize>0){
             for(const opinion of response.result){
                 if(data.opinionType === opinion.opinionType){
-                    throw this.buildError(200,opinion);
+                    return opinion;
                 }
                 if(
                     (data.opinionType === 'upvote' && opinion.opinionType === 'downvote')
@@ -68,8 +84,17 @@ class OpinionService extends Services.AuthorService {
     }
 
 
-    delete = async(request:Helpers.Request,entityId) => {
-        let data = await this.repository.delete(entityId)
+    delete = async(request:Helpers.Request,documentId) => {
+        const postId = request.raw.params['postId'];
+        const commentId = request.raw.params['commentId']||'none';
+
+        const query :any = {
+            postId,
+            commentId,
+            _id:documentId
+        };
+
+        let data = await this.repository.deleteOne(query);
 
         Services.PubSub.Organizer.publishMessage({
             request,

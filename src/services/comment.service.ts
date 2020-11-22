@@ -2,8 +2,9 @@ import {CommentRepository} from '../repositories';
 import {Helpers,Services} from 'node-library';
 import {PubSubMessageTypes} from '../helpers/pubsub.helper';
 import { BinderNames } from '../helpers/binder.helper';
+import StatsService from './stats.service';
 
-class CommentService extends Services.AuthorService {
+class CommentService extends StatsService {
 
     private static instance: CommentService;
     
@@ -19,17 +20,24 @@ class CommentService extends Services.AuthorService {
         return CommentService.instance;
     }
 
-    create = async(request:Helpers.Request,bodyP) => {
-        console.log('comment.service',request,bodyP);
+    create = async(request:Helpers.Request,data) => {
+        console.log('comment.service',request,data);
 
-        const postIdExists = await Services.Binder.boundFunction(BinderNames.POST.CHECK.ID_EXISTS)(request,bodyP.postId)
-        console.log('comment.service','create','postIdExists',postIdExists)
-        if(!postIdExists)
+        data.postId = request.raw.params['postId'];
+
+        const post = await Services.Binder.boundFunction(BinderNames.POST.CHECK.ID_EXISTS)(request,data.postId)
+        
+        console.log('comment.service','create','postIdExists',post)
+
+        if(!post)
             throw this.buildError(404,'postId not available')
 
-        let data:any = bodyP;
-
         data.author = request.getUserId();
+
+        if(data.context==='resolved'){
+            if(data.author !== post.author)
+                throw this.buildError(400,'Since you are not the author of the post, you are not allowed to post resolved comments on the post.')
+        }
 
         data = Helpers.JSON.normalizeJson(data);
 
@@ -48,16 +56,18 @@ class CommentService extends Services.AuthorService {
         return data;
     }
 
-    update = async(request:Helpers.Request,documentId:string,bodyP) => {
-        console.log('comment.service',request,bodyP);
-
-        let data :any = bodyP;
+    update = async(request:Helpers.Request,documentId:string,data) => {
+        console.log('comment.service',request,data);
 
         data = Helpers.JSON.normalizeJson(data);
+        data.isDeleted = false;
 
         console.log('comment.service','db update',data);
 
-        data = await this.repository.updatePartial(documentId,data);
+        data = await this.repository.updateOnePartial({
+            _id:documentId,
+            postId:request.raw.params['postId']
+        },data);
 
         Services.PubSub.Organizer.publishMessage({
             request,
@@ -69,7 +79,14 @@ class CommentService extends Services.AuthorService {
     }
 
     delete = async(request:Helpers.Request,documentId:string) => {
-        let data = await this.repository.delete(documentId)
+        let data :any = {
+            isDeleted:true
+        };
+
+        data = await this.repository.updateOnePartial({
+            _id:documentId,
+            postId:request.raw.params['postId']
+        },data);
 
         Services.PubSub.Organizer.publishMessage({
             request,

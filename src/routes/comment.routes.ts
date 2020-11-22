@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { Middlewares,Services } from 'node-library';
 import { CommentController } from '../controllers';
+import OpinionRoutes from './opinion.routes';
 
 const router = Router()
 
@@ -19,19 +20,46 @@ const schema = {
             "type":"string"
         },
         "context":{
-            "type":"string"
+            "type":"string",
+            "enum": ['general','update','resolved']
         }
     }
 };
 
-router.post('/',Middlewares.authCheck(true),validatorMiddleware.validateRequestBody(schema),controller.create);
+router.param('id',Middlewares.addParamToRequest());
 
-router.post('/search',Middlewares.authCheck(false),controller.getAll)
+router.param('postId',Middlewares.addParamToRequest());
 
-router.get('/:id',Middlewares.authCheck(false),controller.get)
+router.post('/',
+            Middlewares.authCheck(true),
+            validatorMiddleware.validateRequestBody(schema),
+            controller.create);
 
-router.put('/:id',Middlewares.authCheck(true),Middlewares.isAuthor(authorService),validatorMiddleware.validateRequestBody(schema),controller.update)
+router.post('/search',
+            Middlewares.authCheck(false),
+            controller.getAll)
 
-router.delete('/:id',Middlewares.authCheck(true),Middlewares.isAuthor(authorService),controller.delete)
+router.get('/:id',
+            Middlewares.authCheck(false),
+            Middlewares.checkDocumentExists(authorService,'id'),
+            controller.get)
+
+router.put('/:id',
+            Middlewares.authCheck(true),
+            Middlewares.checkDocumentExists(authorService,'id'),
+            Middlewares.isAuthor(authorService),
+            validatorMiddleware.validateRequestBody(schema),
+            controller.update)
+
+router.delete('/:id',
+            Middlewares.authCheck(true),
+            Middlewares.checkDocumentExists(authorService,'id'),
+            Middlewares.isAuthor(authorService),
+            controller.delete)
+
+
+router.use('/:commentId/opinion',
+            Middlewares.checkDocumentExists(authorService,'commentId'),
+            OpinionRoutes);
 
 export default router;

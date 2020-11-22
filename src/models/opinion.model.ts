@@ -9,6 +9,10 @@ const opinionSchema = new mongoose.Schema({
         type: String,
         required:'postId is required'
     },
+    commentId:{
+        type: String,
+        required:'commentId is required'
+    },
     body:{
         type: String
     },

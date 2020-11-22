@@ -5,10 +5,10 @@ const BinderNames = {
             CAN_READ:"QUERY_CHECK_CAN_READ"
         }
     },
-    RESPONSE:{
+    COMMENT:{
         CHECK:{
-            ID_EXISTS:"RESPONSE_CHECK_ID_EXISTS",
-            CAN_READ:"RESPONSE_CHECK_CAN_READ"
+            ID_EXISTS:"COMMENT_CHECK_ID_EXISTS",
+            CAN_READ:"COMMENT_CHECK_CAN_READ"
         }
     }
 }

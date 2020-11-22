@@ -1,5 +1,5 @@
 import * as mongoose from 'mongoose';
-import { LocationSchema } from '../schemas';
+import { LocationSchema, StatsSchema } from '../schemas';
 
 const commentSchema = new mongoose.Schema({
     author:{
@@ -21,7 +21,12 @@ const commentSchema = new mongoose.Schema({
         enum: ['general','update','resolved'],
         default : 'general'
     },
+    isDeleted:{
+        type:Boolean,
+        default:false
+    },
     location:LocationSchema,
+    stats:StatsSchema,
     createdAt:{
         type:Date,
         default:Date.now

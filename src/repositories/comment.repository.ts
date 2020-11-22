@@ -1,7 +1,8 @@
 import { Repositories } from 'node-library';
 import {Comment} from '../models';
+import StatsRepository from './stats.repository';
 
-class CommentRepository extends Repositories.AuthorRepository {
+class CommentRepository extends StatsRepository {
     constructor(){
         super(Comment);
     }

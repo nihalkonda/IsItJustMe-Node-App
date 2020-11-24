@@ -10,6 +10,8 @@ class CommentService extends StatsService {
     
     private constructor() { 
         super(new CommentRepository());
+        Services.Binder.bindFunction(BinderNames.COMMENT.CHECK.ID_EXISTS,this.checkIdExists);
+        Services.PubSub.Organizer.addSubscriberAll(PubSubMessageTypes.OPINION,this);
     }
 
     public static getInstance(): CommentService {
@@ -20,10 +22,23 @@ class CommentService extends StatsService {
         return CommentService.instance;
     }
 
+    processMessage(message: Services.PubSub.Message) {
+        switch(message.type){
+            case PubSubMessageTypes.OPINION.CREATED:
+                this.opinionCreated(message.request,message.data,'commentId');
+                break;
+            case PubSubMessageTypes.OPINION.DELETED:
+                this.opinionDeleted(message.request,message.data,'commentId');
+                break;
+        }
+    }
+
     create = async(request:Helpers.Request,data) => {
         console.log('comment.service',request,data);
 
         data.postId = request.raw.params['postId'];
+
+        data.location = data.location || request.getLocation();
 
         const post = await Services.Binder.boundFunction(BinderNames.POST.CHECK.ID_EXISTS)(request,data.postId)
         
@@ -34,9 +49,9 @@ class CommentService extends StatsService {
 
         data.author = request.getUserId();
 
-        if(data.context==='resolved'){
+        if(data.context==='resolve'){
             if(data.author !== post.author)
-                throw this.buildError(400,'Since you are not the author of the post, you are not allowed to post resolved comments on the post.')
+                throw this.buildError(400,'Since you are not the author of the post, you are not allowed to post resolve comments on the post.')
         }
 
         data = Helpers.JSON.normalizeJson(data);
@@ -53,20 +68,89 @@ class CommentService extends StatsService {
 
         console.log('comment.service','published message');
 
+        return (await this.embedAuthorInformation(request,[data],['author'],
+        Services.Binder.boundFunction(BinderNames.USER.EXTRACT.USER_PROFILES)))[0];
+    }
+
+    getAll = async(request:Helpers.Request, query = {}, sort = {}, pageSize:number = 5, pageNum:number = 1, attributes:string[] = []) => {
+        const exposableAttributes = ['author','postId','content','context','location','status','isDeleted','stats','createdAt','lastModifiedAt'];
+        if(attributes.length === 0)
+            attributes = exposableAttributes;
+        else
+            attributes = attributes.filter( function( el:string ) {
+                return exposableAttributes.includes( el );
+            });
+        const postId = request.raw.params['postId'];
+        const data = await this.repository.getAll({
+            $and:[
+                query,
+                {
+                    postId
+                }
+            ]
+        },sort,pageSize,pageNum,attributes);
+
+        data.result = await this.embedAuthorInformation(request,data.result,['author'],
+        Services.Binder.boundFunction(BinderNames.USER.EXTRACT.USER_PROFILES));
+
         return data;
+    }
+
+    get = async(request:Helpers.Request, documentId: string, attributes?: any[]) => {
+
+        const postId = request.raw.params['postId'];
+        const data = await this.repository.getOne({_id:documentId,postId},attributes);
+
+        if(!data)
+            this.buildError(404);
+
+        Services.PubSub.Organizer.publishMessage({
+            request,
+            type:PubSubMessageTypes.COMMENT.READ,
+            data
+        });
+
+        return (await this.embedAuthorInformation(request,[data],['author'],
+        Services.Binder.boundFunction(BinderNames.USER.EXTRACT.USER_PROFILES)))[0];
     }
 
     update = async(request:Helpers.Request,documentId:string,data) => {
         console.log('comment.service',request,data);
 
+        data.postId = request.raw.params['postId'];
+
+        const post = await Services.Binder.boundFunction(BinderNames.POST.CHECK.ID_EXISTS)(request,data.postId)
+        
+        console.log('comment.service','create','postIdExists',post)
+
+        if(!post)
+            throw this.buildError(404,'postId not available')
+
+        const old = await this.repository.getOne({
+            _id:documentId,
+            postId:data.postId
+        });
+
+        if(!old)
+            throw this.buildError(404,'commentId not available')
+
+        data.author = request.getUserId();
+
+        if(data.context==='resolve'){
+            console.log('data.author',data.author,'post.author',post.author);
+            if(data.author !== post.author)
+                throw this.buildError(400,'Since you are not the author of the post, you are not allowed to post resolve comments on the post.')
+        }
+
         data = Helpers.JSON.normalizeJson(data);
+
         data.isDeleted = false;
 
         console.log('comment.service','db update',data);
 
         data = await this.repository.updateOnePartial({
             _id:documentId,
-            postId:request.raw.params['postId']
+            postId:data.postId
         },data);
 
         Services.PubSub.Organizer.publishMessage({
@@ -75,7 +159,20 @@ class CommentService extends StatsService {
             data
         });
 
-        return data;
+        if(data.context!==old.context){
+            Services.PubSub.Organizer.publishMessage({
+                request,
+                type:PubSubMessageTypes.COMMENT.CONTEXT_CHANGED,
+                data:{
+                    'postId':old.postId,
+                    'old':old.context,
+                    'new':data.context
+                }
+            })
+        }
+
+        return (await this.embedAuthorInformation(request,[data],['author'],
+        Services.Binder.boundFunction(BinderNames.USER.EXTRACT.USER_PROFILES)))[0];
     }
 
     delete = async(request:Helpers.Request,documentId:string) => {
@@ -83,9 +180,11 @@ class CommentService extends StatsService {
             isDeleted:true
         };
 
+        const postId = request.raw.params['postId'];
+
         data = await this.repository.updateOnePartial({
             _id:documentId,
-            postId:request.raw.params['postId']
+            postId
         },data);
 
         Services.PubSub.Organizer.publishMessage({
@@ -94,7 +193,8 @@ class CommentService extends StatsService {
             data
         });
 
-        return data;
+        return (await this.embedAuthorInformation(request,[data],['author'],
+        Services.Binder.boundFunction(BinderNames.USER.EXTRACT.USER_PROFILES)))[0];
     }
 }
 

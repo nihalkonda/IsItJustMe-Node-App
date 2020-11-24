@@ -11,7 +11,7 @@ const authorService : Services.AuthorService = <Services.AuthorService> (control
 const validatorMiddleware = new Middlewares.ValidatorMiddleware();
 
 router.post('/',
-            Middlewares.authCheck(true),
+            Middlewares.authCheck(true,true),
             validatorMiddleware.validateRequestBody({
                 "type": "object",
                 "additionalProperties": false,
@@ -24,8 +24,21 @@ router.post('/',
                         "type":"string",
                         "enum":['follow','upvote','downvote','spamreport']
                     },
-                    "customAttributes":{
-                        "type":"object"
+                    "location":{
+                        "type":"object",
+                        "additionalProperties": true,
+                        "required": ["latitude","longitude"],
+                        "properties":{
+                            "latitude":{
+                                "type":"number"
+                            },
+                            "longitude":{
+                                "type":"number"
+                            },
+                            "raw":{
+                                "type":"object"
+                            }
+                        }
                     }
                 }
             }),controller.create)
@@ -39,7 +52,7 @@ router.get('/:id',
             controller.get)
 
 router.delete('/:id',
-            Middlewares.authCheck(true),
+            Middlewares.authCheck(true,true),
             Middlewares.isAuthor(authorService),
             controller.delete)
 

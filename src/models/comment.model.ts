@@ -3,7 +3,7 @@ import { LocationSchema, StatsSchema } from '../schemas';
 
 const commentSchema = new mongoose.Schema({
     author:{
-        type: mongoose.Schema.Types.ObjectId,
+        type: String,
         required:'author is required',
         ref:'User'
     },
@@ -18,15 +18,21 @@ const commentSchema = new mongoose.Schema({
     },
     context:{
         type: String,
-        enum: ['general','update','resolved'],
+        enum: ['general','update','resolve'],
         default : 'general'
     },
     isDeleted:{
         type:Boolean,
         default:false
     },
-    location:LocationSchema,
-    stats:StatsSchema,
+    location:{
+        type:LocationSchema,
+        default:{}
+    },
+    stats:{
+        type:StatsSchema,
+        default:{}
+    },
     createdAt:{
         type:Date,
         default:Date.now

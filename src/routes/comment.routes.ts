@@ -21,7 +21,23 @@ const schema = {
         },
         "context":{
             "type":"string",
-            "enum": ['general','update','resolved']
+            "enum": ['general','update','resolve']
+        },
+        "location":{
+            "type":"object",
+            "additionalProperties": true,
+            "required": ["latitude","longitude"],
+            "properties":{
+                "latitude":{
+                    "type":"number"
+                },
+                "longitude":{
+                    "type":"number"
+                },
+                "raw":{
+                    "type":"object"
+                }
+            }
         }
     }
 };
@@ -29,9 +45,10 @@ const schema = {
 router.param('id',Middlewares.addParamToRequest());
 
 router.param('postId',Middlewares.addParamToRequest());
+router.param('commentId',Middlewares.addParamToRequest());
 
 router.post('/',
-            Middlewares.authCheck(true),
+            Middlewares.authCheck(true,true),
             validatorMiddleware.validateRequestBody(schema),
             controller.create);
 
@@ -45,14 +62,14 @@ router.get('/:id',
             controller.get)
 
 router.put('/:id',
-            Middlewares.authCheck(true),
+            Middlewares.authCheck(true,true),
             Middlewares.checkDocumentExists(authorService,'id'),
             Middlewares.isAuthor(authorService),
             validatorMiddleware.validateRequestBody(schema),
             controller.update)
 
 router.delete('/:id',
-            Middlewares.authCheck(true),
+            Middlewares.authCheck(true,true),
             Middlewares.checkDocumentExists(authorService,'id'),
             Middlewares.isAuthor(authorService),
             controller.delete)

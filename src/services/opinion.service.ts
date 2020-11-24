@@ -25,34 +25,38 @@ class OpinionService extends Services.AuthorService {
         data.postId = request.raw.params['postId'];
         data.commentId = request.raw.params['commentId']||'none';
 
-        const post = await Services.Binder.boundFunction(BinderNames.POST.CHECK.ID_EXISTS)(request,data.postId)
+        data.location = data.location || request.getLocation();
+
+        const post = await Services.Binder.boundFunction(BinderNames.POST.CHECK.ID_EXISTS)(request,data.postId);
         
-        console.log('comment.service','create','postIdExists',post)
+        console.log('comment.service','create','postIdExists',post);
 
         if(!post)
-            throw this.buildError(404,'postId not available')
+            throw this.buildError(404,'postId not available');
 
         if(data.commentId !== 'none'){
             const comment = await Services.Binder.boundFunction(BinderNames.COMMENT.CHECK.ID_EXISTS)(request,data.commentId);
-            console.log('comment.service','create','commentIdExists',comment)
+
+            console.log('comment.service','create','commentIdExists',comment);
 
             if(!comment)
-                throw this.buildError(404,'commentId not available')
+                throw this.buildError(404,'commentId not available');
 
             if(comment.postId !== data.postId)
-                throw this.buildError(404,'commentId not available under the postId')
+                throw this.buildError(404,'commentId not available under the postId');
         }
 
         data.author = request.getUserId();
 
-        let response = await this.getAll(request,{
+        let response = await this.repository.getAll({
             author:data.author,
             postId:data.postId,
             commentId:data.commentId
-        },100);
+        },{},100);
 
         if(response.resultSize>0){
             for(const opinion of response.result){
+                console.log('OpinionService','Create',opinion,data);
                 if(data.opinionType === opinion.opinionType){
                     return opinion;
                 }
@@ -83,6 +87,53 @@ class OpinionService extends Services.AuthorService {
         return data;
     }
 
+    getAll = async(request:Helpers.Request, query = {}, sort = {}, pageSize:number = 5, pageNum:number = 1, attributes:string[] = []) => {
+        const exposableAttributes = ['author','postId','commentId','location','opinionType','isDeleted','stats','createdAt','lastModifiedAt'];
+        if(attributes.length === 0)
+            attributes = exposableAttributes;
+        else
+            attributes = attributes.filter( function( el:string ) {
+                return exposableAttributes.includes( el );
+            });
+        
+        const postId = request.raw.params['postId'];
+        const commentId = request.raw.params['commentId']||'none';
+
+        const data = await this.repository.getAll({
+            $and:[
+                query,
+                {
+                    postId,
+                    commentId
+                }
+            ]
+        },sort,pageSize,pageNum,attributes);
+
+        data.result = await this.embedAuthorInformation(request,data.result,['author'],
+        Services.Binder.boundFunction(BinderNames.USER.EXTRACT.USER_PROFILES));
+
+        return data;
+    }
+
+    get = async(request:Helpers.Request, documentId: string, attributes?: any[]) => {
+
+        const postId = request.raw.params['postId'];
+        const commentId = request.raw.params['commentId']||'none';
+
+        const data = await this.repository.getOne({_id:documentId,postId,commentId},attributes);
+
+        if(!data)
+            this.buildError(404);
+
+        Services.PubSub.Organizer.publishMessage({
+            request,
+            type:PubSubMessageTypes.COMMENT.READ,
+            data
+        });
+
+        return (await this.embedAuthorInformation(request,[data],['author'],
+        Services.Binder.boundFunction(BinderNames.USER.EXTRACT.USER_PROFILES)))[0];
+    }
 
     delete = async(request:Helpers.Request,documentId) => {
         const postId = request.raw.params['postId'];

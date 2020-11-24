@@ -15,33 +15,33 @@ const validatorMiddleware = new Middlewares.ValidatorMiddleware();
 const schema = {
     "type": "object",
     "additionalProperties": false,
-    "required": ["content","tags","location"],
+    "required": ["content"],
     "properties": {
         "content":{
             "type":"object",
             "additionalProperties": false,
-            "required": ["title","body"],
+            "required": ["title","body","tags"],
             "properties":{
                 "title":{
                     "type":"string"
                 },
                 "body":{
                     "type":"string"
-                }
-            }
-        },
-        "tags":{
-            "type":"array",
-            "items": {
-                "type": "object",
-                "additionalProperties": false,
-                "required": ["maintype","subtype"],
-                "properties":{
-                    "maintype":{
-                        "type":"string"
-                    },
-                    "subtype":{
-                        "type":"string"
+                },
+                "tags":{
+                    "type":"array",
+                    "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": ["mainType","subType"],
+                        "properties":{
+                            "mainType":{
+                                "type":"string"
+                            },
+                            "subType":{
+                                "type":"string"
+                            }
+                        }
                     }
                 }
             }
@@ -57,8 +57,8 @@ const schema = {
                 "longitude":{
                     "type":"number"
                 },
-                "address":{
-                    "type":"string"
+                "raw":{
+                    "type":"object"
                 }
             }
         }
@@ -70,7 +70,7 @@ router.param('id',Middlewares.addParamToRequest());
 router.param('postId',Middlewares.addParamToRequest());
 
 router.post('/',
-            Middlewares.authCheck(true),
+            Middlewares.authCheck(true,true),
             validatorMiddleware.validateRequestBody(schema),
             controller.create)
 
@@ -84,14 +84,14 @@ router.get('/:id',
             controller.get)
 
 router.put('/:id',
-            Middlewares.authCheck(true),
+            Middlewares.authCheck(true,true),
             Middlewares.checkDocumentExists(authorService,'id'),
             Middlewares.isAuthor(authorService),
             validatorMiddleware.validateRequestBody(schema),
             controller.update)
 
 router.delete('/:id',
-            Middlewares.authCheck(true),
+            Middlewares.authCheck(true,true),
             Middlewares.checkDocumentExists(authorService,'id'),
             Middlewares.isAuthor(authorService),
             controller.delete)

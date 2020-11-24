@@ -1,6 +1,7 @@
 import {UserRepository} from '../repositories';
 import {Services,Helpers} from 'node-library';
 import {PubSubMessageTypes} from '../helpers/pubsub.helper';
+import { BinderNames } from '../helpers/binder.helper';
 
 class UserService extends Services.BaseService{
 
@@ -16,7 +17,9 @@ class UserService extends Services.BaseService{
 
     private constructor(){
         super(new UserRepository());
-        Services.PubSub.Organizer.addSubscriber(PubSubMessageTypes.AUTH.USER_SIGNED_UP,this)
+        Services.PubSub.Organizer.addSubscriber(PubSubMessageTypes.AUTH.USER_SIGNED_UP,this);
+        Services.Binder.bindFunction(BinderNames.USER.EXTRACT.USER_PROFILES,this.getUsersByUserIds);
+        Services.Binder.bindFunction(BinderNames.USER.CHECK.ID_EXISTS,this.userIdExists);
     }
 
     processMessage(message: Services.PubSub.Message){
@@ -31,6 +34,14 @@ class UserService extends Services.BaseService{
         }
     }
 
+    userIdExists = async(request:Helpers.Request,userId:string) => {
+        return this.repository.getUserByUserId(userId);
+    }
+
+    getUsersByUserIds = async(userIds:string[]) => {
+        return await this.repository.getUsersByUserIds(userIds);
+    }
+
     userCreated(event: Services.PubSub.Message) {
 
         const {
@@ -41,7 +52,7 @@ class UserService extends Services.BaseService{
         } = event.data;
         
         this.create(event.request,{
-            _id:userId,
+            userId,
             email,
             firstName,
             lastName
@@ -69,19 +80,8 @@ class UserService extends Services.BaseService{
     }
 
     update = async(request:Helpers.Request, entityId, body) =>{
-        const {
-            email,
-            firstName,
-            lastName,
-            displayPicture
-        } = body;
-
-        return await this.repository.updateUserByUserId(request.getUserId(),Helpers.JSON.normalizeJson({
-            email,
-            firstName,
-            lastName,
-            displayPicture
-        }));
+        body.lastModifiedAt = new Date();
+        return await this.repository.updateUserByUserId(request.getUserId(),Helpers.JSON.normalizeJson(body));
     }
 }
 

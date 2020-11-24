@@ -9,8 +9,8 @@ export default new mongoose.Schema({
         type:Number,
         default:0.0
     },
-    address:{
-        type:String,
-        default:''
+    raw:{
+        type:mongoose.Schema.Types.Mixed,
+        default:{}
     }
 });

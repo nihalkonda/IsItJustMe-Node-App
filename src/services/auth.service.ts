@@ -23,7 +23,7 @@ class AuthService extends Services.BaseService {
         const accessToken = Helpers.JWT.encodeToken(
             auth,
             Helpers.JWT.SECRET_TYPE.access,
-            Helpers.JWT.TIME.m30
+            Helpers.JWT.TIME.s30
         );
 
         if(buildRefresh){
@@ -101,7 +101,7 @@ class AuthService extends Services.BaseService {
             }
         });
 
-        return {accessToken,refreshToken}
+        return {accessToken,refreshToken,isConfirmed:false,userId:entity._id}
     }
 
     signIn = async(request:Helpers.Request,user) => {
@@ -126,12 +126,12 @@ class AuthService extends Services.BaseService {
         if(Helpers.Encryption.checkPassword(entity.password,password) == false){
             throw this.buildError(403,"Incorrect email/password.")
         }
-
+        const isConfirmed=entity.account.confirmedAt !== undefined;
         const auth : Helpers.JWT.Auth = {
             id:entity._id,
             email,
             expiryTime:0,
-            isConfirmed:entity.account.confirmedAt !== undefined
+            isConfirmed
         };
 
         const {accessToken,refreshToken} = this.createJwt(request,auth,true);
@@ -148,7 +148,7 @@ class AuthService extends Services.BaseService {
             }
         });
 
-        return {accessToken,refreshToken}
+        return {accessToken,refreshToken,isConfirmed,userId:entity._id}
     }
 
     getMe = async(request:Helpers.Request) => {
@@ -222,7 +222,7 @@ class AuthService extends Services.BaseService {
                     }
                 });
 
-                return {accessToken,refreshToken};
+                return {accessToken,refreshToken,isConfirmed:true,userId:request.getUserId()};
             }
         } catch (error) {
             console.log(error);
@@ -232,12 +232,12 @@ class AuthService extends Services.BaseService {
 
 
     getAccessToken = async(request:Helpers.Request) => {
-        return this.createJwt(request,{
+        return {...this.createJwt(request,{
             id:request.getUserId(),
             email:request.getEmail(),
             expiryTime:0,
             isConfirmed:request.isUserConfirmed()
-        },false);
+        },false),isConfirmed:request.isUserConfirmed(),userId:request.getUserId()};
     }
 
     signOut = async(request:Helpers.Request) => {

@@ -1,4 +1,5 @@
 import {Helpers,Services} from 'node-library';
+import { normalizeJson } from 'node-library/lib/helpers/json.helper';
 import { StatsRepository } from '../repositories';
 
 class StatsService extends Services.AuthorService {
@@ -13,32 +14,21 @@ class StatsService extends Services.AuthorService {
     }
 
     opinionCreated = async(request:Helpers.Request, data:any, entityAttribute:string) => {
-        console.log('opinionCreated',data,entityAttribute);
-        if(!data[entityAttribute])
+        console.log('opinionCreated',data,entityAttribute,data[entityAttribute]);
+        if(entityAttribute in data === false){
+            console.log('opinionCreated',entityAttribute,'nope');
             return;
+        }
         return await this.updateStat(request, data[entityAttribute], data['opinionType']+'Count',true);
     }
 
     opinionDeleted = async(request:Helpers.Request, data:any, entityAttribute:string) => {
-        console.log('opinionCreated',data,entityAttribute);
-        if(!data[entityAttribute])
+        console.log('opinionDeleted',data,entityAttribute,data[entityAttribute]);
+        if(entityAttribute in data === false)
             return;
         return await this.updateStat(request, data[entityAttribute], data['opinionType']+'Count',false);
     }
 
-    commentCreated = async(request:Helpers.Request, data:any, entityAttribute:string) => {
-        console.log('commentCreated',data,entityAttribute);
-        if(!data[entityAttribute])
-            return;
-        return await this.updateStat(request, data[entityAttribute], 'commentCount',true);
-    }
-
-    commentDeleted = async(request:Helpers.Request, data:any, entityAttribute:string) => {
-        console.log('commentDeleted',data,entityAttribute);
-        if(!data[entityAttribute])
-            return;
-            return await this.updateStat(request, data[entityAttribute], 'commentCount',false);
-    }
 }
 
 export default StatsService;

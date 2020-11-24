@@ -1,4 +1,5 @@
 import * as mongoose from 'mongoose';
+import { LocationSchema } from '../schemas';
 
 const opinionSchema = new mongoose.Schema({
     author:{
@@ -21,11 +22,14 @@ const opinionSchema = new mongoose.Schema({
         enum:['follow','upvote','downvote','spamreport'],
         default:'upvote'
     },
+    location:LocationSchema,
     createdAt:{
         type: Date,
         default: Date.now
     }
 });
+
+opinionSchema.index({'opinionType':1,'postId':1,'commentId':1,'author':1},{unique:true});
 
 const Opinion = mongoose.model('Opinion',opinionSchema);
 

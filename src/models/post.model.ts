@@ -3,7 +3,7 @@ import { LocationSchema, StatsSchema } from '../schemas';
 
 const postSchema = new mongoose.Schema({
     author:{
-        type: mongoose.Schema.Types.ObjectId,
+        type: String,
         required:'author is required',
         ref:'User'
     },
@@ -19,20 +19,32 @@ const postSchema = new mongoose.Schema({
             required: 'body is required'
         },
         tags:[{
-            type: String
+            mainType:{
+                type: String,
+                trim: true,
+                lowercase: true,
+                required:'mainType is required'
+            },
+            subType:{
+                type: String,
+                trim: true,
+                lowercase: true,
+                required:'subType is required'
+            }
         }]
-    },
-    status:{
-        type:String,
-        enum:['open','resolved'],
-        default:'open'
     },
     isDeleted:{
         type:Boolean,
         default:false
     },
-    location:LocationSchema,
-    stats:StatsSchema,
+    location:{
+        type:LocationSchema,
+        default:{}
+    },
+    stats:{
+        type:StatsSchema,
+        default:{}
+    },
     createdAt:{
         type:Date,
         default:Date.now

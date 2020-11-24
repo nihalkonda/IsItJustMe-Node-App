@@ -69,6 +69,7 @@ class RefreshTokenService extends Services.BaseService {
     }
 
     async getActiveRefreshTokenCount(request:Helpers.Request) {
+        console.log('getActiveRefreshTokenCount','tokenValue',request.getTokenValue());
         return await this.repository.getActiveRefreshTokenCount(request.getTokenValue());
     }
 

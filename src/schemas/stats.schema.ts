@@ -28,5 +28,13 @@ export default new mongoose.Schema({
     updateCount:{
         type:Number,
         default:0
+    },
+    resolveCount:{
+        type:Number,
+        default:0
+    },
+    score:{
+        type:Number,
+        default:0
     }
 });

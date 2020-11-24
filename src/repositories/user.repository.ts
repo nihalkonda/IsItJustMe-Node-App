@@ -15,15 +15,20 @@ class UserRepository extends Repositories.BaseRepository {
         return await this.model.findOne({userId})
     }
 
+    getUsersByUserIds = async(userIds:string[]) => {
+        return await this.model.find({"userId":{$in:userIds}});
+    }
+
     updateUserByEmail = async(email : string,entity) => {
         delete entity.userId;
         delete entity.email;
-        return await this.model.findOneAndUpdate({email},entity,{new:true})
+        return await this.model.findOneAndUpdate({email},entity,{new:true,useFindAndModify:true})
     }
 
     updateUserByUserId = async(userId : string,entity) => {
         delete entity.userId;
-        return await this.model.findOneAndUpdate({userId},entity,{new:true})
+        console.log('UserRepository','updateUserByUserId',userId,entity)
+        return await this.model.findOneAndUpdate({userId},{$set:entity},{new:true,useFindAndModify:true})
     }
 
 }

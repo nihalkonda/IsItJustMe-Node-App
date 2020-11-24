@@ -46,7 +46,7 @@ router.post('/sign_in',validatorMiddleware.validateRequestBody({
     }
 }),authController.signIn)
 
-router.get('/access_token',Middlewares.authCheck(true,true),authController.getAccessToken)
+router.get('/access_token',Middlewares.authCheck(true),authController.getAccessToken)
 
 router.get('/me',Middlewares.authCheck(true),authController.me)
 
@@ -63,8 +63,8 @@ router.post('/confirmation_token',Middlewares.authCheck(true),validatorMiddlewar
     }
 }),authController.confirmationToken)
 
-router.delete('/sign_out',Middlewares.authCheck(true,true),authController.signOut)
+router.delete('/sign_out',Middlewares.authCheck(true),authController.signOut)
 
-router.delete('/sign_out_all',Middlewares.authCheck(true,true),authController.signOutAll)
+router.delete('/sign_out_all',Middlewares.authCheck(true),authController.signOutAll)
 
 export default router;

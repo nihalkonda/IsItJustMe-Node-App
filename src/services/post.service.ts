@@ -145,8 +145,6 @@ class PostService extends StatsService {
     update = async(request:Helpers.Request,documentId:string,data) => {
         console.log('post.service',request,data);
 
-        //data = Helpers.JSON.normalizeJson(data);
-
         data.lastModifiedAt = new Date();
         data.isDeleted = false;
         data.location = data.location || request.getLocation();

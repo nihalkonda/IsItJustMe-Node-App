@@ -26,7 +26,6 @@ class PostService extends StatsService {
         return PostService.instance;
     }
 
-    
     processMessage(message: Services.PubSub.Message) {
         switch(message.type){
             case PubSubMessageTypes.POST.READ:

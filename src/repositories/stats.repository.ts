@@ -11,6 +11,14 @@ class StatsRepository extends Repositories.AuthorRepository {
         query["stats."+property] = increase ? 1 : -1;
         return await this.model.findOneAndUpdate({ _id:entityId },{$inc:query},{new:true})
     }
+
+    updateStatMany = async(entityId,data:{property:string,increase:number}[]) => {
+        const query = {}
+        data.forEach((d)=>{
+            query["stats."+d.property] = d.increase;
+        })
+        return await this.model.findOneAndUpdate({ _id:entityId },{$inc:query},{new:true})
+    }
 }
 
 export default StatsRepository;

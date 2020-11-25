@@ -48,6 +48,8 @@ class OpinionService extends Services.AuthorService {
 
         data.author = request.getUserId();
 
+        data.postAuthorOpinion = data.author === post.author;
+
         let response = await this.repository.getAll({
             author:data.author,
             postId:data.postId,
@@ -125,11 +127,11 @@ class OpinionService extends Services.AuthorService {
         if(!data)
             this.buildError(404);
 
-        Services.PubSub.Organizer.publishMessage({
-            request,
-            type:PubSubMessageTypes.COMMENT.READ,
-            data
-        });
+        // Services.PubSub.Organizer.publishMessage({
+        //     request,
+        //     type:PubSubMessageTypes.OPINION.READ,
+        //     data
+        // });
 
         return (await this.embedAuthorInformation(request,[data],['author'],
         Services.Binder.boundFunction(BinderNames.USER.EXTRACT.USER_PROFILES)))[0];

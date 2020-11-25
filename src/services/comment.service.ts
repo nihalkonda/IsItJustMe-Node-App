@@ -26,10 +26,26 @@ class CommentService extends StatsService {
         switch(message.type){
             case PubSubMessageTypes.OPINION.CREATED:
                 this.opinionCreated(message.request,message.data,'commentId');
+                this.possibleCommentResolve(message.request,message.data,true);
                 break;
             case PubSubMessageTypes.OPINION.DELETED:
                 this.opinionDeleted(message.request,message.data,'commentId');
+                this.possibleCommentResolve(message.request,message.data,false);
                 break;
+        }
+    }
+    possibleCommentResolve(request: Helpers.Request, data: any,enable:boolean) {
+        if( ('commentId' in data) && (data['commentId'] !== 'none') && data['postAuthorOpinion'] && data['opinionType'] === 'follow'){
+            this.repository.updatePartial(data['commentId'],{'context':enable?'resolve':'update'});
+            Services.PubSub.Organizer.publishMessage({
+                request,
+                type:PubSubMessageTypes.COMMENT.CONTEXT_CHANGED,
+                data:{
+                    'postId':data['postId'],
+                    'old':enable?'general':'resolve',
+                    'new':enable?'resolve':'update'
+                }
+            })
         }
     }
 

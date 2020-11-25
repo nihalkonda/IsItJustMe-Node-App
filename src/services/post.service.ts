@@ -132,12 +132,13 @@ class PostService extends StatsService {
         if(!data)
             this.buildError(404);
 
-        Services.PubSub.Organizer.publishMessage({
-            request,
-            type:PubSubMessageTypes.POST.READ,
-            data
-        });
-
+        if(request.raw.query['full']){
+            Services.PubSub.Organizer.publishMessage({
+                request,
+                type:PubSubMessageTypes.POST.READ,
+                data
+            });
+        }
         return (await this.embedAuthorInformation(request,[data],['author'],
         Services.Binder.boundFunction(BinderNames.USER.EXTRACT.USER_PROFILES)))[0];
     }
@@ -151,6 +152,11 @@ class PostService extends StatsService {
 
         console.log('post.service','db update',data);
 
+        const old = await this.repository.get(documentId);
+        
+        if(!old)
+            throw this.buildError(404,'postId not found');
+
         data = await this.repository.updatePartial(documentId,data);
 
         Services.PubSub.Organizer.publishMessage({
@@ -158,6 +164,17 @@ class PostService extends StatsService {
             type:PubSubMessageTypes.POST.UPDATED,
             data
         });
+
+        if(this.tagsChanged(old.content.tags,data.content.tags)){
+            Services.PubSub.Organizer.publishMessage({
+                request,
+                type:PubSubMessageTypes.POST.TAG_CHANGED,
+                data:{
+                    'old':old.content.tags,
+                    'new':data.content.tags
+                }
+            })
+        }
 
         return (await this.embedAuthorInformation(request,[data],['author'],
             Services.Binder.boundFunction(BinderNames.USER.EXTRACT.USER_PROFILES)))[0];
@@ -178,6 +195,19 @@ class PostService extends StatsService {
 
         return (await this.embedAuthorInformation(request,[data],['author'],
             Services.Binder.boundFunction(BinderNames.USER.EXTRACT.USER_PROFILES)))[0];
+    }
+
+    tagsChanged = (oldTags,newTags) => {
+        try {
+            const base64 = (str) => {return Buffer.from(str).toString('base64');};
+            const tagId = (tag) => {return `${base64(tag.mainType.toLowerCase())}|${base64(tag.subType.toLowerCase())}`};
+            const deconstruct = (arr) => {return JSON.stringify(arr.map(tagId).sort())};
+            console.log(deconstruct(oldTags),deconstruct(newTags),deconstruct(oldTags) !== deconstruct(newTags))
+            return deconstruct(oldTags) !== deconstruct(newTags);
+        } catch (error) {
+            console.log(error);
+        }
+        return false;
     }
 
     deepEqual =  (x, y) => {

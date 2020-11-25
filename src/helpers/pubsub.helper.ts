@@ -11,7 +11,8 @@ const PubSubMessageTypes = {
         CREATED:"POST_CREATED",
         READ:"POST_READ",
         UPDATED:"POST_UPDATED",
-        DELETED:"POST_DELETED"
+        DELETED:"POST_DELETED",
+        TAG_CHANGED:"COMMENT_TAG_CHANGED"
     },
     COMMENT:{
         CREATED:"COMMENT_CREATED",

@@ -22,6 +22,10 @@ const opinionSchema = new mongoose.Schema({
         enum:['follow','upvote','downvote','spamreport'],
         default:'upvote'
     },
+    postAuthorOpinion:{
+        type: Boolean,
+        default: false
+    },
     location:LocationSchema,
     createdAt:{
         type: Date,

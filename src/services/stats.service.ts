@@ -8,10 +8,10 @@ class StatsService extends Services.AuthorService {
         super(repository);
     }
 
-    updateStat = async(request:Helpers.Request, entityId:string, statType:string, increase:boolean) => {
-        console.log('updateStat',entityId,statType,increase);
-        return await this.repository.updateStat(entityId,statType,increase);
-    }
+    // updateStat = async(request:Helpers.Request, entityId:string, statType:string, increase:boolean) => {
+    //     console.log('updateStat',entityId,statType,increase);
+    //     return await this.repository.updateStat(entityId,statType,increase);
+    // }
 
     updateStatMany = async(request:Helpers.Request, entityId:string, data:{property:string, increase:number}[]) => {
         console.log('updateStat',entityId,data);

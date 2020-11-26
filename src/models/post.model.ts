@@ -19,18 +19,9 @@ const postSchema = new mongoose.Schema({
             required: 'body is required'
         },
         tags:[{
-            mainType:{
-                type: String,
-                trim: true,
-                lowercase: true,
-                required:'mainType is required'
-            },
-            subType:{
-                type: String,
-                trim: true,
-                lowercase: true,
-                required:'subType is required'
-            }
+            type: String,
+            trim: true,
+            lowercase: true
         }]
     },
     isDeleted:{

@@ -34,6 +34,7 @@ class CommentService extends StatsService {
                 break;
         }
     }
+
     possibleCommentResolve(request: Helpers.Request, data: any,enable:boolean) {
         if( ('commentId' in data) && (data['commentId'] !== 'none') && data['postAuthorOpinion'] && data['opinionType'] === 'follow'){
             this.repository.updatePartial(data['commentId'],{'context':enable?'resolve':'update'});
@@ -67,7 +68,7 @@ class CommentService extends StatsService {
 
         if(data.context==='resolve'){
             if(data.author !== post.author)
-                throw this.buildError(400,'Since you are not the author of the post, you are not allowed to post resolve comments on the post.')
+                throw this.buildError(403,'Since you are not the author of the post, you are not allowed to post resolve comments on the post.')
         }
 
         data = Helpers.JSON.normalizeJson(data);

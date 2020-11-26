@@ -6,11 +6,9 @@ class TagRepository extends Repositories.BaseRepository {
         super(Tag);
     }
 
-    updateTag = async(mainType:string,subType:string,increment:boolean) => {
-        let query = {"mainType":mainType,"subType":subType};
-        
+    updateTag = async(tag:string,increment:boolean) => {
         //@ts-ignore
-        return await this.model.findOneAndUpdate(query,{$set:query,$inc:{"count":increment?1:-1}},{upsert:true});
+        return await this.model.findOneAndUpdate({tag},{$set:{tag},$inc:{count:increment?1:-1}},{upsert:true});
     }
 }
 

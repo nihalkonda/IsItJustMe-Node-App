@@ -1,21 +1,111 @@
 import {Config} from 'node-library';
 import * as mongoose from 'mongoose';
-import { Tag } from "./models";
+import { TagRepository } from "./repositories";
+
+let tagRepository:TagRepository;
 
 mongoose.connect(Config.MONGO_URI+'',{
     useNewUrlParser:true,
     useUnifiedTopology: true
 })
-.then(()=>{console.log('db connected'); test1("Who Is","He",true); })
-.catch((err : mongoose.Error)=>console.log(err));
+.then(()=>{
+    console.log('db connected');
+    tagRepository  = new TagRepository();
+    test1();
+}).catch((err : mongoose.Error)=>console.log(err));
 
-function test1(mainType:string,subType:string,increment:boolean){
+async function test1(){
     console.log('Test 1')
-    let query = {"mainType":mainType,"subType":subType};
+    const steps = [
+        {
+            type:'u',
+            val:'apple',
+            inc:true
+        },
+        {
+            type:'u',
+            val:'ball',
+            inc:true
+        },
+        {
+            type:'u',
+            val:'cat',
+            inc:true
+        },
+        {
+            type:'l',
+            val:'apple',
+            verify:1
+        },
+        {
+            type:'l',
+            val:'ball',
+            verify:1
+        },
+        {
+            type:'l',
+            val:'cat',
+            verify:1
+        },
+        {
+            type:'u',
+            val:'apple',
+            inc:true
+        },
+        {
+            type:'u',
+            val:'ball',
+            inc:true
+        },
+        {
+            type:'u',
+            val:'cat',
+            inc:false
+        },
+        {
+            type:'u',
+            val:'dog',
+            inc:true
+        },
+        {
+            type:'l',
+            val:'apple',
+            verify:2
+        },
+        {
+            type:'l',
+            val:'ball',
+            verify:2
+        },
+        {
+            type:'l',
+            val:'cat',
+            verify:0
+        },
+        {
+            type:'l',
+            val:'dog',
+            verify:1
+        },
+        {
+            type:'dl',
+            arr:['apple','ball','cat','dog']
+        }
+    ];
 
-    Tag.findOneAndUpdate(query,{$set:query,$inc:{"count":increment?1:-1}},{upsert:true}).then((result)=>{
-        console.log('Test 1','passed',result);
-    }).catch((error)=>{
-        console.log('Test 1','failed',error);
-    });
+    for (const step of steps) {
+        console.log(step);
+        if(step.type==='u'){
+            console.log(await tagRepository.updateTag(step.val||'',step.inc||false));
+        }else if(step.type==='l'){
+            const l = await tagRepository.getOne({tag:step.val});
+            console.log(step,l, step.verify === l.count);
+        }else if(step.type==='dl'){
+            for (const t of step.arr||[]) {
+                await tagRepository.deleteOne({tag:t});
+                console.log('deleted',t);
+            }
+        }
+    }
+    
 }

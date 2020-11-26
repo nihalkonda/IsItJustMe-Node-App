@@ -38,10 +38,10 @@ class PostService extends StatsService {
                 this.opinionDeleted(message.request,message.data,'postId');
                 break;
             case PubSubMessageTypes.COMMENT.CREATED:
-                this.commentCreated(message.request,message.data,'postId');
+                this.commentStats(message.request,message.data,'postId',true);
                 break;
             case PubSubMessageTypes.COMMENT.DELETED:
-                this.commentDeleted(message.request,message.data,'postId');
+                this.commentStats(message.request,message.data,'postId',false);
                 break;
             case PubSubMessageTypes.COMMENT.CONTEXT_CHANGED:
                 this.commentContextChanged(message.request,message.data,'postId');
@@ -50,40 +50,88 @@ class PostService extends StatsService {
     } 
     
     postRead(request: Helpers.Request, data: any) {
-        this.updateStat(request,data._id,"viewCount",true);
+        this.updateStatMany(request,data._id,[{property:"viewCount",increase:1}]);
     }
 
-    commentCreated = async(request:Helpers.Request, data:any, entityAttribute:string) => {
-        console.log('commentCreated',data,entityAttribute);
-        if(entityAttribute in data === false)
-            return;
-        if(data['context']!=='general'){
-            await this.updateStat(request, data[entityAttribute], `${data['context']}Count`,true);
-        }
-        return await this.updateStat(request, data[entityAttribute], 'commentCount',true);
-    }
+    commentStats = async(request:Helpers.Request, data:any, entityAttribute:string, increased:boolean) => {
+        console.log('commentStats',data,entityAttribute,increased);
 
-    commentDeleted = async(request:Helpers.Request, data:any, entityAttribute:string) => {
-        console.log('commentDeleted',data,entityAttribute);
         if(entityAttribute in data === false)
             return;
-        if(data['context']!=='general'){
-            await this.updateStat(request, data[entityAttribute], `${data['context']}Count`,false);
-        }
-        return await this.updateStat(request, data[entityAttribute], 'commentCount',false);
+        
+        const statsMap:{[key:string]:string[]} = {
+            'general':['comment'],
+            'update':['comment','update'],
+            'resolve':['comment','resolve']
+        };
+
+        const stats:{property:string,increase:number}[] = [];
+
+        statsMap[data['context']].forEach((sm)=>{
+            stats.push({property:`${sm}Count`,increase:increased?1:-1});
+        })
+
+        return await this.updateStatMany(request, data[entityAttribute], stats);
     }
 
     commentContextChanged = async(request:Helpers.Request, data:any, entityAttribute:string) => {
-        console.log('commentDeleted',data,entityAttribute);
+        console.log('commentContextChanged',data,entityAttribute);
+
         if(entityAttribute in data === false)
             return;
-        if(data['old']!=='general'){
-            await this.updateStat(request, data[entityAttribute], `${data['old']}Count`,false);
-        }
-        if(data['new']!=='general'){
-            await this.updateStat(request, data[entityAttribute], `${data['new']}Count`,true);
-        }
-        return 0;
+        
+        let stats:{property:string,increase:number}[] = [];
+        
+        // const statsMap:{[key:string]:string[]} = {
+        //     'general':['comment'],
+        //     'update':['comment','update'],
+        //     'resolve':['comment','resolve']
+        // };
+
+        // g g *
+        // g u +u
+        if(data['old'] === 'general' && data['new'] === 'update')
+            stats = [{property:'updateCount',increase:1}];
+        // g r +r
+        if(data['old'] === 'general' && data['new'] === 'resolve')
+            stats = [{property:'resolveCount',increase:1}];
+        // u g -u
+        if(data['old'] === 'update' && data['new'] === 'general')
+            stats = [{property:'updateCount',increase:-1}];
+        // u u *
+        // u r -u +r
+        if(data['old'] === 'update' && data['new'] === 'resolve')
+            stats = [{property:'updateCount',increase:-1},{property:'resolveCount',increase:1}];
+        // r g -r
+        if(data['old'] === 'resolve' && data['new'] === 'general')
+            stats = [{property:'resolveCount',increase:-1}];
+        // r u +u -r
+        if(data['old'] === 'resolve' && data['new'] === 'update')
+            stats = [{property:'updateCount',increase:1},{property:'resolveCount',increase:-1}];
+        // r r *  
+
+        // const propInc = {
+        //     'comment':0,'update':0,'resolve':0
+        // };
+
+        // statsMap[data['old']].forEach((sm)=>{
+        //     propInc[sm] -= 1;
+        // })
+
+        // statsMap[data['new']].forEach((sm)=>{
+        //     propInc[sm] += 1;
+        // })
+
+        // Object.keys(propInc).forEach((k)=>{
+        //     if(propInc[k]!==0)
+        //         stats.push({property:`${k}Count`,increase:propInc[k]})
+        // })
+
+        return await this.updateStatMany(request, data[entityAttribute], stats);
+    }
+
+    sanitizeTags = (tags:string[]) => {
+        return [...new Set(tags.map((tag:string)=>tag.trim().toLowerCase().replace(/  +/g, ' ')))];
     }
 
     create = async(request:Helpers.Request,data) => {
@@ -92,6 +140,8 @@ class PostService extends StatsService {
         data.author = request.getUserId();
 
         data.location = data.location || request.getLocation();
+
+        data.content.tags = this.sanitizeTags(data.content.tags);
 
         console.log('post.service','db insert',data);
 
@@ -150,6 +200,8 @@ class PostService extends StatsService {
         data.isDeleted = false;
         data.location = data.location || request.getLocation();
 
+        data.content.tags = this.sanitizeTags(data.content.tags);
+
         console.log('post.service','db update',data);
 
         const old = await this.repository.get(documentId);
@@ -165,13 +217,14 @@ class PostService extends StatsService {
             data
         });
 
-        if(this.tagsChanged(old.content.tags,data.content.tags)){
+        const {added,deleted,tagsChanged} = this.tagsChanged(old.content.tags,data.content.tags);
+        if(tagsChanged){
             Services.PubSub.Organizer.publishMessage({
                 request,
                 type:PubSubMessageTypes.POST.TAG_CHANGED,
                 data:{
-                    'old':old.content.tags,
-                    'new':data.content.tags
+                    added,
+                    deleted
                 }
             })
         }
@@ -197,17 +250,16 @@ class PostService extends StatsService {
             Services.Binder.boundFunction(BinderNames.USER.EXTRACT.USER_PROFILES)))[0];
     }
 
-    tagsChanged = (oldTags,newTags) => {
-        try {
-            const base64 = (str) => {return Buffer.from(str).toString('base64');};
-            const tagId = (tag) => {return `${base64(tag.mainType.toLowerCase())}|${base64(tag.subType.toLowerCase())}`};
-            const deconstruct = (arr) => {return JSON.stringify(arr.map(tagId).sort())};
-            console.log(deconstruct(oldTags),deconstruct(newTags),deconstruct(oldTags) !== deconstruct(newTags))
-            return deconstruct(oldTags) !== deconstruct(newTags);
-        } catch (error) {
-            console.log(error);
-        }
-        return false;
+    tagsChanged = (oldTags:string[],newTags:string[]) => {
+        const oldSet = new Set(oldTags);
+        const newSet = new Set(newTags);
+
+        oldSet.forEach((o)=>{
+            if(newSet.delete(o))
+                oldSet.delete(o)
+        })
+
+        return {deleted:[...oldSet],added:[...newSet],tagsChanged:(oldSet.size>0||newSet.size>0)}
     }
 
     deepEqual =  (x, y) => {

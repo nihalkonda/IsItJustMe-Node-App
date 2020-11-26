@@ -31,17 +31,7 @@ const schema = {
                 "tags":{
                     "type":"array",
                     "items": {
-                        "type": "object",
-                        "additionalProperties": false,
-                        "required": ["mainType","subType"],
-                        "properties":{
-                            "mainType":{
-                                "type":"string"
-                            },
-                            "subType":{
-                                "type":"string"
-                            }
-                        }
+                        "type": "string"
                     }
                 }
             }

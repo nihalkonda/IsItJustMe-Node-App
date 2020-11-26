@@ -23,23 +23,26 @@ class TagService extends Services.BaseService {
         switch(message.type){
             case PubSubMessageTypes.POST.CREATED:
                 this.updateTags(message.request,[],message.data.content.tags);
+                break;
             case PubSubMessageTypes.POST.TAG_CHANGED:
-                this.updateTags(message.request,message.data['old'],message.data['new']);
+                this.updateTags(message.request,message.data['deleted'],message.data['added']);
+                break
             case PubSubMessageTypes.POST.DELETED:
                 this.updateTags(message.request,message.data.content.tags,[]);
-
+                break
         }
     }
 
-    updateTags = async(request:Helpers.Request,oldTags,newTags) => {
+    updateTags = async(request:Helpers.Request,oldTags:string[],newTags:string[]) => {
         try {
+            if(oldTags.length > 0)
             for (let i = 0; i < oldTags.length; i++) {
-                const tag = oldTags[i];
-                await this.repository.updateTag(tag.mainType,tag.subType,false);
+                await this.repository.updateTag(oldTags[i],false);
             }
+
+            if(newTags.length > 0)
             for (let i = 0; i < newTags.length; i++) {
-                const tag = newTags[i];
-                await this.repository.updateTag(tag.mainType,tag.subType,true);
+                await this.repository.updateTag(newTags[i],true);
             }
         } catch (error) {
             console.error(error);

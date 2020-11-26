@@ -1,34 +1,15 @@
 import * as mongoose from 'mongoose';
 
 const tagSchema = new mongoose.Schema({
-    mainType:{
+    tag:{
         type: String,
         trim: true,
         lowercase: true,
-        required:'mainType is required'
-    },
-    subType:{
-        type: String,
-        trim: true,
-        lowercase: true,
-        required:'subType is required'
+        unique:true
     },
     count:{
         type:Number,
         default:0
-    }
-});
-
-tagSchema.index({'mainType':1,'subType':1},{unique:true});
-
-tagSchema.post('save', function(error, doc, next) {
-    if (error.name === 'MongoError' && error.code === 11000) {
-        error = new Error();
-        error.status = 400;
-        error.message = 'Email already exists.';
-        next(error);
-    } else {
-        next(error);
     }
 });
 

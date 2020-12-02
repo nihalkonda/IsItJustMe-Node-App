@@ -1,6 +1,7 @@
 import {TagRepository} from '../repositories';
 import {Helpers,Services} from 'node-library';
 import {PubSubMessageTypes} from '../helpers/pubsub.helper';
+import { BinderNames } from '../helpers/binder.helper';
 
 class TagService extends Services.BaseService {
 
@@ -9,6 +10,7 @@ class TagService extends Services.BaseService {
     private constructor() { 
         super(new TagRepository());
         Services.PubSub.Organizer.addSubscriberAll(PubSubMessageTypes.POST,this);
+        Services.Binder.bindFunction(BinderNames.TAG.EXTRACT.TAG_LIST,this.getTagsByTagList);
     }
 
     public static getInstance(): TagService {
@@ -31,6 +33,10 @@ class TagService extends Services.BaseService {
                 this.updateTags(message.request,message.data.content.tags,[]);
                 break
         }
+    }
+    
+    getTagsByTagList = async(tags:string[]) => {
+        return await this.repository.getTagsByTagList(tags);
     }
 
     updateTags = async(request:Helpers.Request,oldTags:string[],newTags:string[]) => {

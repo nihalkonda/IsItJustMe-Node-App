@@ -27,6 +27,8 @@ class OpinionService extends Services.AuthorService {
 
         data.location = data.location || request.getLocation();
 
+        data.location.raw = data.location.raw || request.getLocation().raw;
+
         const post = await Services.Binder.boundFunction(BinderNames.POST.CHECK.ID_EXISTS)(request,data.postId);
         
         console.log('comment.service','create','postIdExists',post);

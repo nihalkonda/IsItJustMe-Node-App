@@ -10,6 +10,10 @@ class TagRepository extends Repositories.BaseRepository {
         //@ts-ignore
         return await this.model.findOneAndUpdate({tag},{$set:{tag},$inc:{count:increment?1:-1}},{upsert:true});
     }
+
+    getTagsByTagList = async(tags:string[]) => {
+        return await this.model.find({"tag":{$in:tags}});
+    }
 }
 
 export default TagRepository;

@@ -7,6 +7,12 @@ const tagSchema = new mongoose.Schema({
         lowercase: true,
         unique:true
     },
+    type:{
+        type:String,
+        trim:true,
+        lowercase:true,
+        default:'generic'
+    },
     count:{
         type:Number,
         default:0

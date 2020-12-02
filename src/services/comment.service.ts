@@ -54,8 +54,10 @@ class CommentService extends StatsService {
         console.log('comment.service',request,data);
 
         data.postId = request.raw.params['postId'];
-
+        
         data.location = data.location || request.getLocation();
+
+        data.location.raw = data.location.raw || request.getLocation().raw;
 
         const post = await Services.Binder.boundFunction(BinderNames.POST.CHECK.ID_EXISTS)(request,data.postId)
         

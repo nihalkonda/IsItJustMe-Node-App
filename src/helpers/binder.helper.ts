@@ -18,6 +18,11 @@ const BinderNames = {
             ID_EXISTS:"COMMENT_CHECK_ID_EXISTS",
             CAN_READ:"COMMENT_CHECK_CAN_READ"
         }
+    },
+    TAG:{
+        EXTRACT:{
+            TAG_LIST:"TAG_EXTRACT_TAG_LIST"
+        }
     }
 }
 

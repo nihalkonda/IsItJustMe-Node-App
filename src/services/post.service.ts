@@ -1,6 +1,6 @@
-import {PostRepository} from '../repositories';
-import {Helpers,Services} from 'node-library';
-import {PubSubMessageTypes} from '../helpers/pubsub.helper';
+import { PostRepository } from '../repositories';
+import { Helpers, Services } from 'node-library';
+import { PubSubMessageTypes } from '../helpers/pubsub.helper';
 import { BinderNames } from '../helpers/binder.helper';
 import StatsService from './stats.service';
 import { normalizeJson } from 'node-library/lib/helpers/json.helper';
@@ -8,14 +8,14 @@ import { normalizeJson } from 'node-library/lib/helpers/json.helper';
 class PostService extends StatsService {
 
     private static instance: PostService;
-    
-    private constructor() { 
-        super(new PostRepository());
-        Services.Binder.bindFunction(BinderNames.POST.CHECK.ID_EXISTS,this.checkIdExists);
 
-        Services.PubSub.Organizer.addSubscriberAll(PubSubMessageTypes.POST,this);
-        Services.PubSub.Organizer.addSubscriberAll(PubSubMessageTypes.COMMENT,this);
-        Services.PubSub.Organizer.addSubscriberAll(PubSubMessageTypes.OPINION,this);
+    private constructor() {
+        super(new PostRepository());
+        Services.Binder.bindFunction(BinderNames.POST.CHECK.ID_EXISTS, this.checkIdExists);
+
+        Services.PubSub.Organizer.addSubscriberAll(PubSubMessageTypes.POST, this);
+        Services.PubSub.Organizer.addSubscriberAll(PubSubMessageTypes.COMMENT, this);
+        Services.PubSub.Organizer.addSubscriberAll(PubSubMessageTypes.OPINION, this);
     }
 
     public static getInstance(): PostService {
@@ -27,61 +27,61 @@ class PostService extends StatsService {
     }
 
     processMessage(message: Services.PubSub.Message) {
-        switch(message.type){
+        switch (message.type) {
             case PubSubMessageTypes.POST.READ:
-                this.postRead(message.request,message.data);
+                this.postRead(message.request, message.data);
                 break;
             case PubSubMessageTypes.OPINION.CREATED:
-                this.opinionCreated(message.request,message.data,'postId');
+                this.opinionCreated(message.request, message.data, 'postId');
                 break;
             case PubSubMessageTypes.OPINION.DELETED:
-                this.opinionDeleted(message.request,message.data,'postId');
+                this.opinionDeleted(message.request, message.data, 'postId');
                 break;
             case PubSubMessageTypes.COMMENT.CREATED:
-                this.commentStats(message.request,message.data,'postId',true);
+                this.commentStats(message.request, message.data, 'postId', true);
                 break;
             case PubSubMessageTypes.COMMENT.DELETED:
-                this.commentStats(message.request,message.data,'postId',false);
+                this.commentStats(message.request, message.data, 'postId', false);
                 break;
             case PubSubMessageTypes.COMMENT.CONTEXT_CHANGED:
-                this.commentContextChanged(message.request,message.data,'postId');
+                this.commentContextChanged(message.request, message.data, 'postId');
                 break;
         }
-    } 
-    
-    postRead(request: Helpers.Request, data: any) {
-        this.updateStatMany(request,data._id,[{property:"viewCount",increase:1}]);
     }
 
-    commentStats = async(request:Helpers.Request, data:any, entityAttribute:string, increased:boolean) => {
-        console.log('commentStats',data,entityAttribute,increased);
+    postRead(request: Helpers.Request, data: any) {
+        this.updateStatMany(request, data._id, [{ property: "viewCount", increase: 1 }]);
+    }
 
-        if(entityAttribute in data === false)
+    commentStats = async (request: Helpers.Request, data: any, entityAttribute: string, increased: boolean) => {
+        console.log('commentStats', data, entityAttribute, increased);
+
+        if (entityAttribute in data === false)
             return;
-        
-        const statsMap:{[key:string]:string[]} = {
-            'general':['comment'],
-            'update':['comment','update'],
-            'resolve':['comment','resolve']
+
+        const statsMap: { [key: string]: string[] } = {
+            'general': ['comment'],
+            'update': ['comment', 'update'],
+            'resolve': ['comment', 'resolve']
         };
 
-        const stats:{property:string,increase:number}[] = [];
+        const stats: { property: string, increase: number }[] = [];
 
-        statsMap[data['context']].forEach((sm)=>{
-            stats.push({property:`${sm}Count`,increase:increased?1:-1});
+        statsMap[data['context']].forEach((sm) => {
+            stats.push({ property: `${sm}Count`, increase: increased ? 1 : -1 });
         })
 
         return await this.updateStatMany(request, data[entityAttribute], stats);
     }
 
-    commentContextChanged = async(request:Helpers.Request, data:any, entityAttribute:string) => {
-        console.log('commentContextChanged',data,entityAttribute);
+    commentContextChanged = async (request: Helpers.Request, data: any, entityAttribute: string) => {
+        console.log('commentContextChanged', data, entityAttribute);
 
-        if(entityAttribute in data === false)
+        if (entityAttribute in data === false)
             return;
-        
-        let stats:{property:string,increase:number}[] = [];
-        
+
+        let stats: { property: string, increase: number }[] = [];
+
         // const statsMap:{[key:string]:string[]} = {
         //     'general':['comment'],
         //     'update':['comment','update'],
@@ -90,24 +90,24 @@ class PostService extends StatsService {
 
         // g g *
         // g u +u
-        if(data['old'] === 'general' && data['new'] === 'update')
-            stats = [{property:'updateCount',increase:1}];
+        if (data['old'] === 'general' && data['new'] === 'update')
+            stats = [{ property: 'updateCount', increase: 1 }];
         // g r +r
-        if(data['old'] === 'general' && data['new'] === 'resolve')
-            stats = [{property:'resolveCount',increase:1}];
+        if (data['old'] === 'general' && data['new'] === 'resolve')
+            stats = [{ property: 'resolveCount', increase: 1 }];
         // u g -u
-        if(data['old'] === 'update' && data['new'] === 'general')
-            stats = [{property:'updateCount',increase:-1}];
+        if (data['old'] === 'update' && data['new'] === 'general')
+            stats = [{ property: 'updateCount', increase: -1 }];
         // u u *
         // u r -u +r
-        if(data['old'] === 'update' && data['new'] === 'resolve')
-            stats = [{property:'updateCount',increase:-1},{property:'resolveCount',increase:1}];
+        if (data['old'] === 'update' && data['new'] === 'resolve')
+            stats = [{ property: 'updateCount', increase: -1 }, { property: 'resolveCount', increase: 1 }];
         // r g -r
-        if(data['old'] === 'resolve' && data['new'] === 'general')
-            stats = [{property:'resolveCount',increase:-1}];
+        if (data['old'] === 'resolve' && data['new'] === 'general')
+            stats = [{ property: 'resolveCount', increase: -1 }];
         // r u +u -r
-        if(data['old'] === 'resolve' && data['new'] === 'update')
-            stats = [{property:'updateCount',increase:1},{property:'resolveCount',increase:-1}];
+        if (data['old'] === 'resolve' && data['new'] === 'update')
+            stats = [{ property: 'updateCount', increase: 1 }, { property: 'resolveCount', increase: -1 }];
         // r r *  
 
         // const propInc = {
@@ -130,175 +130,235 @@ class PostService extends StatsService {
         return await this.updateStatMany(request, data[entityAttribute], stats);
     }
 
-    sanitizeTags = (tags:string[]) => {
-        return [...new Set(tags.map((tag:string)=>tag.trim().toLowerCase().replace(/  +/g, ' ')))];
+    sanitizeTags = (tags: string[]) => {
+        return [...new Set(tags.map((tag: string) => tag.trim().toLowerCase().replace(/  +/g, ' ')))];
     }
 
-    create = async(request:Helpers.Request,data) => {
-        console.log('post.service',request,data);
+    embedTagInformation = async (request: Helpers.Request, arr: any[] = []) => {
+        console.log('embedTagInformation', arr)
+
+        try {
+            if (arr.length === 0)
+                return arr;
+
+            const tags = {};
+            //content.tags
+            arr.forEach((a) => {
+                a.content.tags.forEach((at) => {
+                    tags[at] = {};
+                })
+            })
+
+            const tagInfos = await Services.Binder.boundFunction(BinderNames.TAG.EXTRACT.TAG_LIST)(Object.keys(tags));
+
+            tagInfos.forEach((tagInfo) => {
+                tagInfo = JSON.parse(JSON.stringify(tagInfo));
+                tags[tagInfo['tag']] = tagInfo;
+            })
+
+            console.log('embedTagInformation', tags);
+
+            for (let i = 0; i < arr.length; i++) {
+                arr[i] = JSON.parse(JSON.stringify(arr[i]));
+                arr[i]['content']['tags'] = arr[i]['content']['tags'].map(tag => tags[tag]);
+            }
+
+            console.log('embedTagInformation', arr);
+
+        } catch (error) {
+            console.error(error)
+        }
+
+        return arr;
+    }
+
+    create = async (request: Helpers.Request, data) => {
+        console.log('post.service', request, data);
 
         data.author = request.getUserId();
 
         data.location = data.location || request.getLocation();
 
+        data.location.raw = data.location.raw || request.getLocation().raw;
+
         data.content.tags = this.sanitizeTags(data.content.tags);
 
-        console.log('post.service','db insert',data);
+        console.log('post.service', 'db insert', data);
 
         try {
             data = await this.repository.create(data);
         } catch (error) {
-            throw this.buildError(400,error);
+            throw this.buildError(400, error);
         }
 
         Services.PubSub.Organizer.publishMessage({
             request,
-            type:PubSubMessageTypes.POST.CREATED,
+            type: PubSubMessageTypes.POST.CREATED,
             data
         });
 
-        console.log('post.service','published message');
+        console.log('post.service', 'published message');
 
-        return (await this.embedAuthorInformation(request,[data],['author'],
+        data = (await this.embedAuthorInformation(request, [data], ['author'],
             Services.Binder.boundFunction(BinderNames.USER.EXTRACT.USER_PROFILES)))[0];
-    }
 
-    getAll = async(request:Helpers.Request, query = {}, sort = {}, pageSize:number = 5, pageNum:number = 1, attributes:string[] = []) => {
-        const exposableAttributes = ['author','content.title','content.tags','location','status','isDeleted','stats','createdAt','lastModifiedAt','threadLastUpdatedAt'];
-        if(attributes.length === 0)
-            attributes = exposableAttributes;
-        else
-            attributes = attributes.filter( function( el:string ) {
-                return exposableAttributes.includes( el );
-            });
-        const data = await this.repository.getAll(query,sort,pageSize,pageNum,attributes);
-
-        data.result = await this.embedAuthorInformation(request,data.result,['author'],
-        Services.Binder.boundFunction(BinderNames.USER.EXTRACT.USER_PROFILES));
+        data = (await this.embedTagInformation(request, [data]))[0];
 
         return data;
     }
 
-    get = async(request:Helpers.Request, documentId: string, attributes?: any[]) => {
+    getAll = async (request: Helpers.Request, query = {}, sort = {}, pageSize: number = 5, pageNum: number = 1, attributes: string[] = []) => {
+        const exposableAttributes = ['author', 'content.title', 'content.tags', 'location', 'status', 'isDeleted', 'stats', 'createdAt', 'lastModifiedAt', 'threadLastUpdatedAt'];
+        if (attributes.length === 0)
+            attributes = exposableAttributes;
+        else
+            attributes = attributes.filter(function (el: string) {
+                return exposableAttributes.includes(el);
+            });
+        const data = await this.repository.getAll(query, sort, pageSize, pageNum, attributes);
 
-        const data = await this.repository.get(documentId,attributes);
+        data.result = await this.embedAuthorInformation(request, data.result, ['author'],
+            Services.Binder.boundFunction(BinderNames.USER.EXTRACT.USER_PROFILES));
 
-        if(!data)
+        data.result = await this.embedTagInformation(request, data.result);
+
+        return data;
+    }
+
+    get = async (request: Helpers.Request, documentId: string, attributes?: any[]) => {
+
+        let data = await this.repository.get(documentId, attributes);
+
+        if (!data)
             this.buildError(404);
 
-        if(request.raw.query['full']){
+        if (request.raw.query['full']) {
             Services.PubSub.Organizer.publishMessage({
                 request,
-                type:PubSubMessageTypes.POST.READ,
+                type: PubSubMessageTypes.POST.READ,
                 data
             });
         }
-        return (await this.embedAuthorInformation(request,[data],['author'],
-        Services.Binder.boundFunction(BinderNames.USER.EXTRACT.USER_PROFILES)))[0];
+
+        data = (await this.embedAuthorInformation(request, [data], ['author'],
+            Services.Binder.boundFunction(BinderNames.USER.EXTRACT.USER_PROFILES)))[0];
+
+        data = (await this.embedTagInformation(request, [data]))[0];
+
+        console.log(data);
+
+        return data;
     }
 
-    update = async(request:Helpers.Request,documentId:string,data) => {
-        console.log('post.service',request,data);
+    update = async (request: Helpers.Request, documentId: string, data) => {
+        console.log('post.service', request, data);
 
         data.lastModifiedAt = new Date();
         data.isDeleted = false;
-        data.location = data.location || request.getLocation();
+        //data.location = data.location || request.getLocation();
 
         data.content.tags = this.sanitizeTags(data.content.tags);
 
-        console.log('post.service','db update',data);
+        console.log('post.service', 'db update', data);
 
         const old = await this.repository.get(documentId);
-        
-        if(!old)
-            throw this.buildError(404,'postId not found');
 
-        
+        if (!old)
+            throw this.buildError(404, 'postId not found');
+
+
 
         try {
-            data = await this.repository.updatePartial(documentId,data);
+            data = await this.repository.updatePartial(documentId, data);
         } catch (error) {
-            throw this.buildError(400,error);
+            throw this.buildError(400, error);
         }
 
         Services.PubSub.Organizer.publishMessage({
             request,
-            type:PubSubMessageTypes.POST.UPDATED,
+            type: PubSubMessageTypes.POST.UPDATED,
             data
         });
 
-        const {added,deleted,tagsChanged} = this.tagsChanged(old.content.tags,data.content.tags);
-        if(tagsChanged){
+        const { added, deleted, tagsChanged } = this.tagsChanged(old.content.tags, data.content.tags);
+        if (tagsChanged) {
             Services.PubSub.Organizer.publishMessage({
                 request,
-                type:PubSubMessageTypes.POST.TAG_CHANGED,
-                data:{
+                type: PubSubMessageTypes.POST.TAG_CHANGED,
+                data: {
                     added,
                     deleted
                 }
             })
         }
 
-        return (await this.embedAuthorInformation(request,[data],['author'],
+        data = (await this.embedAuthorInformation(request, [data], ['author'],
             Services.Binder.boundFunction(BinderNames.USER.EXTRACT.USER_PROFILES)))[0];
+
+        data = (await this.embedTagInformation(request, [data]))[0];
+
+        return data;
     }
 
-    delete = async(request:Helpers.Request,documentId:string) => {
-        let data :any = {
-            isDeleted:true
+    delete = async (request: Helpers.Request, documentId: string) => {
+        let data: any = {
+            isDeleted: true
         };
 
         try {
-            data = await this.repository.updatePartial(documentId,data);
+            data = await this.repository.updatePartial(documentId, data);
         } catch (error) {
-            throw this.buildError(400,error);
+            throw this.buildError(400, error);
         }
 
         Services.PubSub.Organizer.publishMessage({
             request,
-            type:PubSubMessageTypes.POST.DELETED,
+            type: PubSubMessageTypes.POST.DELETED,
             data
         });
 
-        return (await this.embedAuthorInformation(request,[data],['author'],
+        data = (await this.embedAuthorInformation(request, [data], ['author'],
             Services.Binder.boundFunction(BinderNames.USER.EXTRACT.USER_PROFILES)))[0];
+
+        data = (await this.embedTagInformation(request, [data]))[0];
+
+        return data;
     }
 
-    tagsChanged = (oldTags:string[],newTags:string[]) => {
+    tagsChanged = (oldTags: string[], newTags: string[]) => {
         const oldSet = new Set(oldTags);
         const newSet = new Set(newTags);
 
-        oldSet.forEach((o)=>{
-            if(newSet.delete(o))
+        oldSet.forEach((o) => {
+            if (newSet.delete(o))
                 oldSet.delete(o)
         })
 
-        return {deleted:[...oldSet],added:[...newSet],tagsChanged:(oldSet.size>0||newSet.size>0)}
+        return { deleted: [...oldSet], added: [...newSet], tagsChanged: (oldSet.size > 0 || newSet.size > 0) }
     }
 
-    deepEqual =  (x, y) => {
+    deepEqual = (x, y) => {
         if (x === y) {
-          return true;
+            return true;
         }
         else if ((typeof x == "object" && x != null) && (typeof y == "object" && y != null)) {
-          if (Object.keys(x).length != Object.keys(y).length)
-            return false;
-      
-          for (var prop in x) {
-            if (y.hasOwnProperty(prop))
-            {  
-              if (! this.deepEqual(x[prop], y[prop]))
+            if (Object.keys(x).length != Object.keys(y).length)
                 return false;
+
+            for (var prop in x) {
+                if (y.hasOwnProperty(prop)) {
+                    if (!this.deepEqual(x[prop], y[prop]))
+                        return false;
+                }
+                else
+                    return false;
             }
-            else
-              return false;
-          }
-      
-          return true;
+
+            return true;
         }
-        else 
-          return false;
-      }
+        else
+            return false;
+    }
 
 }
 

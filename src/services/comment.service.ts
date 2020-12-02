@@ -75,7 +75,11 @@ class CommentService extends StatsService {
 
         console.log('comment.service','db insert',data);
 
-        data = await this.repository.create(data);
+        try {
+            data = await this.repository.create(data);
+        } catch (error) {
+            throw this.buildError(error);
+        }
 
         Services.PubSub.Organizer.publishMessage({
             request,
@@ -165,10 +169,14 @@ class CommentService extends StatsService {
 
         console.log('comment.service','db update',data);
 
-        data = await this.repository.updateOnePartial({
-            _id:documentId,
-            postId:data.postId
-        },data);
+        try {
+            data = await this.repository.updateOnePartial({
+                _id:documentId,
+                postId:data.postId
+            },data);
+        } catch (error) {
+            throw this.buildError(400,error);
+        }
 
         Services.PubSub.Organizer.publishMessage({
             request,
@@ -199,10 +207,14 @@ class CommentService extends StatsService {
 
         const postId = request.raw.params['postId'];
 
-        data = await this.repository.updateOnePartial({
-            _id:documentId,
-            postId
-        },data);
+        try {
+            data = await this.repository.updateOnePartial({
+                _id:documentId,
+                postId
+            },data);
+        } catch (error) {
+            throw this.buildError(400,error);
+        }
 
         Services.PubSub.Organizer.publishMessage({
             request,

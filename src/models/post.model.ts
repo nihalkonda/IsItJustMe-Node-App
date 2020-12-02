@@ -16,7 +16,7 @@ const postSchema = new mongoose.Schema({
         body:{
             type: String,
             trim: true,
-            required: 'body is required'
+            default:''
         },
         tags:[{
             type: String,

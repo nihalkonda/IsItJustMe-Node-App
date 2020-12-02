@@ -145,7 +145,11 @@ class PostService extends StatsService {
 
         console.log('post.service','db insert',data);
 
-        data = await this.repository.create(data);
+        try {
+            data = await this.repository.create(data);
+        } catch (error) {
+            throw this.buildError(400,error);
+        }
 
         Services.PubSub.Organizer.publishMessage({
             request,
@@ -209,7 +213,13 @@ class PostService extends StatsService {
         if(!old)
             throw this.buildError(404,'postId not found');
 
-        data = await this.repository.updatePartial(documentId,data);
+        
+
+        try {
+            data = await this.repository.updatePartial(documentId,data);
+        } catch (error) {
+            throw this.buildError(400,error);
+        }
 
         Services.PubSub.Organizer.publishMessage({
             request,
@@ -238,7 +248,11 @@ class PostService extends StatsService {
             isDeleted:true
         };
 
-        data = await this.repository.updatePartial(documentId,data);
+        try {
+            data = await this.repository.updatePartial(documentId,data);
+        } catch (error) {
+            throw this.buildError(400,error);
+        }
 
         Services.PubSub.Organizer.publishMessage({
             request,

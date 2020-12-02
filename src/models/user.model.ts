@@ -18,12 +18,12 @@ const userSchema = new mongoose.Schema({
     firstName:{
         type: String,
         trim: true,
-        required:'First Name is required!'
+        default:''
     },
     lastName:{
         type: String,
         trim: true,
-        required:'Last Name is required!'
+        default:''
     },
     displayPicture:{
         type: String,

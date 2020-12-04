@@ -2,6 +2,7 @@ import {OpinionRepository} from '../repositories';
 import {Helpers,Services} from 'node-library';
 import {PubSubMessageTypes} from '../helpers/pubsub.helper';
 import { BinderNames } from '../helpers/binder.helper';
+import * as CommonUtils from '../helpers/common.helper';
 
 class OpinionService extends Services.AuthorService {
 
@@ -26,8 +27,10 @@ class OpinionService extends Services.AuthorService {
         data.commentId = request.raw.params['commentId']||'none';
 
         data.location = data.location || request.getLocation();
-
-        data.location.raw = data.location.raw || request.getLocation().raw;
+        
+        if(!data.location.raw){
+            data.location.raw = (await CommonUtils.reverseLookup(data.location));
+        }
 
         const post = await Services.Binder.boundFunction(BinderNames.POST.CHECK.ID_EXISTS)(request,data.postId);
         

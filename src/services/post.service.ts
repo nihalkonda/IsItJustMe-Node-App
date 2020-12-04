@@ -4,6 +4,7 @@ import { PubSubMessageTypes } from '../helpers/pubsub.helper';
 import { BinderNames } from '../helpers/binder.helper';
 import StatsService from './stats.service';
 import { normalizeJson } from 'node-library/lib/helpers/json.helper';
+import * as CommonUtils from '../helpers/common.helper';
 
 class PostService extends StatsService {
 
@@ -179,7 +180,9 @@ class PostService extends StatsService {
 
         data.location = data.location || request.getLocation();
 
-        data.location.raw = data.location.raw || request.getLocation().raw;
+        if(!data.location.raw){
+            data.location.raw = (await CommonUtils.reverseLookup(data.location));
+        }
 
         data.content.tags = this.sanitizeTags(data.content.tags);
 
